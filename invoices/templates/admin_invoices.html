@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Invoices</title>
+</head>
+<body>
+    <h1>Admin Invoices - {{ action }}</h1>
+    <a href="?action=create">Create New Invoice</a>
+    <a href="?action=update">Update Invoice</a>
+    <a href="?action=delete">Delete Invoice</a>
+    <a href="?action=view">View Invoices</a>
+
+    {% if action == 'view' %}
+    <table>
+        <tr>
+            <th>Vendor ID</th>
+            <th>Invoice Number</th>
+            <th>Invoice Date</th>
+            <th>Purchase Order Number</th>
+            <th>Description</th>
+            <th>Quantity</th>
+            <th>Price</th>
+        </tr>
+        {% for invoice in invoices %}
+        <tr>
+            <td>{{ invoice.vendor.idVendors }}</td>
+            <td>{{ invoice.Invoice_number }}</td>
+            <td>{{ invoice.Invoice_date }}</td>
+            <td>{{ invoice.Purchase_Order.Purchase_Order_number }}</td>
+            <td>{{ invoice.Description }}</td>
+            <td>{{ invoice.Quantity }}</td>
+            <td>{{ invoice.Price }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% endif %}
+</body>
+</html>
