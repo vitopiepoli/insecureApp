@@ -9,16 +9,18 @@
     <h1>Welcome to the Invoice Management System</h1>
     <form action="{% url 'login' %}" method="post">
         {% csrf_token %}
-        <label for="user_type">User Type:</label>
-        <select name="user_type" id="user_type">
-            <option value="Admin">Admin</option>
-            <option value="Payable">Accounts Payable</option>
-        </select><br><br>
         <label for="username">Username:</label>
         <input type="text" id="username" name="username"><br><br>
         <label for="password">Password:</label>
         <input type="password" id="password" name="password"><br><br>
         <button type="submit">Login</button>
     </form>
+    {% if messages %}
+    <ul class="messages">
+        {% for message in messages %}
+        <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
 </body>
 </html>

@@ -26,9 +26,9 @@
         {% for invoice in invoices %}
         <tr>
             <td>{{ invoice.Invoice_number }}</td>
-            <td>{{ invoice.Name }}</td>
+            <td>{{ invoice.vendor.Name }}</td>
             <td>{{ invoice.Invoice_date }}</td>
-            <td>{{ invoice.Purchase_Order_number }}</td>
+            <td>{{ invoice.Purchase_Order.Purchase_Order_number }}</td>
             <td>{{ invoice.Description }}</td>
             <td>{{ invoice.Quantity }}</td>
             <td>{{ invoice.Price }}</td>

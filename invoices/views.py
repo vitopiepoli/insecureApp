@@ -6,47 +6,48 @@ import mysql.connector
 from django.db.models import Q
 from django.urls import reverse
 import hashlib
+from django.utils import timezone
+from django.contrib.auth import authenticate, login as django_login
+from django.contrib.auth.decorators import login_required
+from .decorators import user_role_required
+from django.contrib.auth.models import Group
+from django.contrib import messages
+from django.db import DatabaseError
 # Create your views here.
 
-def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
 
 
-user_credentials = {
-    "admin@invoices": "hardpass",
-    "payable@invoices": "hardpass2",
-}
 
 def home(request):
     return render(request, 'home.html')
 
 
 def login(request):
-    username = request.POST.get('username')
-    password = request.POST.get('password')
-    
-    
-    if user_credentials.get(username) == password:
-        user_type = request.POST.get('user_type')
-        if user_type == 'Admin':
-            return redirect(reverse('admin_invoices'))
-        elif user_type == 'Payable':
-            return redirect(reverse('payable_invoices'))
-    return HttpResponse("Invalid credentials")
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            django_login(request, user)
+            if user.groups.filter(name='Admin').exists():
+                return redirect('admin_invoices')
+            elif user.groups.filter(name='Payable').exists():
+                return redirect('payable_invoices')
+            else:
+                messages.error(request, "Unauthorized role")
+                return render(request, 'home.html')
+        else:
+            messages.error(request, "Invalid credentials")
+            return render(request, 'home.html')
+    return render(request, 'home.html')
 
+
+@login_required
+@user_role_required(allowed_roles=['Admin'])
 def admin_invoices(request):
     action = request.GET.get('action', 'view')
     if action == 'create':
         if request.method == 'POST':
-            # Connect using admin credentials
-            connection = mysql.connector.connect(
-                host='localhost',
-                user='admin@invoices',
-                password='hardpass',
-                database='mydb'
-            )
-            cursor = connection.cursor()
-
             # Collect data from form
             vendor_id = request.POST.get('vendor_id')
             invoice_number = request.POST.get('invoice_number')
@@ -55,27 +56,29 @@ def admin_invoices(request):
             description = request.POST.get('description')
             quantity = request.POST.get('quantity')
             price = request.POST.get('price')
-            
+
+            # Use Django ORM to create new VendorInvoice
             vendor, created = Vendor.objects.get_or_create(idVendors=vendor_id)
             po, created = VendorPO.objects.get_or_create(Purchase_Order_number=po_number)
-
-            # SQL to insert data
-            insert_query = """
-            INSERT INTO vendor_invoices (vendor_ID, Invoice_number, Invoice_date, Purchase_Order_number, Description, Quantity, Price)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """
-            cursor.execute(insert_query, (vendor_id, invoice_number, invoice_date, po_number, description, quantity, price))
-            connection.commit()
-            cursor.close()
-            connection.close()
+            VendorInvoice.objects.create(
+                vendor=vendor,
+                Invoice_number=invoice_number,
+                Invoice_date=invoice_date or timezone.now(),
+                Purchase_Order=po,
+                Description=description,
+                Quantity=quantity,
+                Price=price
+            )
             return redirect('admin_invoices')
         return render(request, 'create_invoice.html')
     elif action in ['update', 'delete', 'view']:
         # Display invoices using admin credentials
         return render(request, 'admin_invoices.html', {'action': 'options'})
+
         
     
-
+@login_required
+@user_role_required(allowed_roles=['Payable'])
 def payable_invoices(request):
     if request.method == 'GET' and any([request.GET.get('vendor_id'), request.GET.get('invoice_number'), request.GET.get('purchase_order_number')]):
         connection = mysql.connector.connect(
